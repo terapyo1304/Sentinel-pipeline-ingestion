@@ -1,3 +1,4 @@
+import dotenv
 from sentinelsat import SentinelAPI
 import scipy.misc as misc #not working
 import scipy.ndimage
@@ -9,9 +10,21 @@ import matplotlib.image as mpimg
 from PIL import Image
 from osgeo import gdal
 import pandas as pd
-import xarray
+import xarray as xr
 import re
-api=SentinelAPI('aryamanskatoch', 'Chungus-rdr2')
+import s3fs
+from dotenv import load_dotenv
+import os
+import logging
+import boto3
+from botocore.exceptions import ClientError
+
+apiusr=load_dotenv('apiusr')
+apipass=load_dotenv('apipass')
+acc_key=load_dotenv('acc_key')
+sec_key=load_dotenv('sec_key')
+bucket=load_dotenv('bucket')
+api=SentinelAPI(apiusr,apipass)
 s_date=date(2023, 1, 11)
 f_date=date.today()
 query_kwargs = {
@@ -23,15 +36,6 @@ kw=query_kwargs.copy()
 kw['raw']=f'filename:S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE'
 '''pp=api.query(**kw)
 api.download_all(pp)'''
-file=''
-bird= gdal.Open('/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05.jp2')
-bird_array= mpimg.imread('/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05.jp2')
-#print(bird.size, bird.shape, bird.ndim)
-print(bird_array)
-ba2=gdal.Warp('/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05_resampled.jp2',bird,xRes=10,yRes=10)
-ba2=iio.imread('/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05_resampled.jp2')
-print('resampled:',ba2)
-
 
 
 
@@ -39,31 +43,43 @@ print('resampled:',ba2)
 #print("aryaman")
 
 #resampling all the 20m bands
-'''np_array=[]
-bands=['/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B02.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B03.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B04.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B06.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B07.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B08.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B09.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B10.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B11.jp2','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B12.jp2']
-for item in bands:
-    if item=='/w*B05/w*' or item=='/w*B06/w*' or item=='/w*B07/w*' or item=='/w*B11/w*' or item=='/w*B12/w*':
-        bird= gdal.Open(item)
-        bird_array= iio.imread(item)
-        #print(bird.size, bird.shape, bird.ndim)
-        print(bird_array)
-        ba2=gdal.Warp(item,bird,xRes=2,yRes=2)
-        ba2=iio.imread(item)
-        #print('resampled:',ba2)
-        np_array.append(ba2)
-    else:
-        bird= gdal.Open(item)
-        bird_array= iio.imread(item)
-        np_array.append(bird_array)'''
+bands=[]
+bands_10=['/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B02','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B03','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B04','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B08',]
+bands_20=['/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B06','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B07','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B11','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B12']
+for item in bands_20:
     
+        itname=item+'.jp2'
+        bird= gdal.Open(itname)
         
-#convert to dask        
-'''bands_dask=dask.array.from_array(np.load(np_array, mmap_mode='r')
-#convert to xarray
-#convert numpy array to dataset
-bands_ds = bands.to_dataset(name='bands') #convert numpy array to dataset
-#convert to zarr
-bands_zarr = bands_ds.to_zarr('/home/indukatoch/Sentinel-pipeline-ingestion/bands.zarr')'''
+        dest=item+'_resampled.jp2'
+        ba2=gdal.Warp(dest,bird,xRes=10,yRes=10)
+        ba2_ar=iio.imread(dest)
+        
+        bands.append(xr.open_dataarray(ba2_ar))
+
+for item in bands_10:
+        itname=item+'.jp2'
+        bird= gdal.Open(itname)
+        bands.append(xr.open_dataarray(bird))
+
+bands=xr.merge(bands)
+bands.to_zarr('/home/indukatoch/Sentinel-pipeline-ingestion/bands.zarr')
+
+s3 = s3fs.S3FileSystem(
+      key=acc_key,
+      secret=sec_key,
+      client_kwargs={
+         'endpoint_url': 'http://cyclops.ap-south-1.linodeobjects.com/'
+      }
+   )
+
+
+def upload_data(filepath, file_name):
+    s3 = s3fs.S3FileSystem()
+    s3_path = f"cyclops/{img.zarr}"
+    s3.put(filepath, s3_path, recursive=True)
+        
+
                      
 
 '''
