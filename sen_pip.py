@@ -18,12 +18,12 @@ import os
 import logging
 import boto3
 from botocore.exceptions import ClientError
-
-apiusr=load_dotenv('apiusr')
-apipass=load_dotenv('apipass')
-acc_key=load_dotenv('acc_key')
-sec_key=load_dotenv('sec_key')
-bucket=load_dotenv('bucket')
+load_dotenv()
+apiusr=os.getenv('apiusr')
+apipass=os.getenv('apipass')
+acc_key=os.getenv('acc_key')
+sec_key=os.getenv('sec_key')
+bucket=os.getenv('bucket')
 api=SentinelAPI(apiusr,apipass)
 s_date=date(2023, 1, 11)
 f_date=date.today()
