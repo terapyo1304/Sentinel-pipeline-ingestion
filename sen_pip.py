@@ -18,6 +18,7 @@ import os
 import logging
 import boto3
 from botocore.exceptions import ClientError
+from glob import glob
 load_dotenv()
 apiusr=os.getenv('apiusr')
 apipass=os.getenv('apipass')
@@ -28,39 +29,33 @@ api=SentinelAPI(apiusr,apipass)
 s_date=date(2023, 1, 11)
 f_date=date.today()
 query_kwargs = {
-        'platformname': 'Sentinel-2',
-        'producttype': 'S2MSI1C',
-        'date': (s_date, f_date)}
+        'platformname': 'Sentinel-2'
+               }
 
 kw=query_kwargs.copy()
-kw['raw']=f'filename:S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE'
-'''pp=api.query(**kw)
-api.download_all(pp)'''
+kw['raw']=f'filename:S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025*'
+pp=api.query(**kw)
+print(pp)
+api.download_all(pp)
 
-
-
-
-#print("aryaman")
 
 #resampling all the 20m bands
 bands=[]
-bands_10=['/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B02','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B03','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B04','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B08',]
-bands_20=['/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B05','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B06','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B07','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B11','/home/indukatoch/Sentinel-pipeline-ingestion/S2B_MSIL1C_20230206T090039_N0509_R007_T33MYU_20230206T105859.SAFE/GRANULE/L1C_T33MYU_A030921_20230206T091138/IMG_DATA/T33MYU_20230206T090039_B12']
+bands_10=['*/B02/*','*/B03/*','*/B04/*','*/B08/*']
+bands_20=['*/B05/*','*/B06/*','*/B07/*','*/B11/*','*/B12/*']
 for item in bands_20:
-    
-        itname=item+'.jp2'
-        bird= gdal.Open(itname)
-        
-        dest=item+'_resampled.jp2'
-        ba2=gdal.Warp(dest,bird,xRes=10,yRes=10)
-        ba2_ar=iio.imread(dest)
-        
-        bands.append(xr.open_dataarray(ba2_ar))
+        im_path='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025.SAFE/GRANULE/*/IMG_DATA/*.jp2'
+        if item in glob(im_path):
+                bird= gdal.Open(im_path)
+                ba2=gdal.Warp(im_path,bird,xRes=10,yRes=10)
+                ba2_ar=iio.imread(im_path)
+                bands.append(xr.open_dataarray(ba2_ar))
 
 for item in bands_10:
-        itname=item+'.jp2'
-        bird= gdal.Open(itname)
-        bands.append(xr.open_dataarray(bird))
+        im_path='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025.SAFE/GRANULE/*/IMG_DATA/*.jp2'
+        if item in glob(im_path):
+                bird= gdal.Open(im_path)
+                bands.append(xr.open_dataarray(bird))
 
 bands=xr.merge(bands)
 bands.to_zarr('/home/indukatoch/Sentinel-pipeline-ingestion/bands.zarr')
@@ -82,32 +77,3 @@ def upload_data(filepath, file_name):
 
                      
 
-'''
-def resizelayer(old):
-    rows,cols=old.shape
-    #move old points
-    rNew=2*rows-1
-    cNew=2*cols-1
-    new=np.zeros((rNew,cNew))
-    new[0:rNew:2, 0:cNew:2]=old[0:rows,0:cols]
-
-    #produce vertical values
-    new[1:rNew:2,:]=(new[0:rNew-1:2,:]+new[2:rNew:2,:])/2
-
-    #produce horizontal values
-    new[:,1:cNew:2]=(new[:,0:cNew-1:2]+new[:,2:cNew:2])/2
-    return new
-print(resizelayer(bird))
-
-rows,cols,layers=bird.shape
-new=np.zeros((2*rows-1,2*cols-1,layers))
-print('original dimensions=',bird.shape)
-for layer in range(3):
-    new[:,:,layer]=resizelayer(bird[:,:,layer])
-
-    new=new.astype(np.uint8)
-    print("new dimensions=",new.shape)
-
-    img2=Image.formarray(new) #new image formed
-    newName="big-"+bird
-    img2.save(newName)'''

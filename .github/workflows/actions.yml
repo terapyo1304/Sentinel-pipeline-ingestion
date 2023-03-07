@@ -1,9 +1,12 @@
 name: run sen_pip.py
 
 on:
-  schedule:
-    - cron: '0 0 * * 1' # At 00:00 on Monday
-
+  workflow_dispatch:
+    inputs:
+      kw:
+        description: kw
+        required: true
+        type: choice
 jobs:
   build:
     runs-on: ubuntu-latest
