@@ -1,3 +1,5 @@
+
+from aioitertools import product
 import dotenv
 from sentinelsat import SentinelAPI
 import scipy.misc as misc #not working
@@ -31,9 +33,9 @@ f_date=date.today()
 query_kwargs = {
         'platformname': 'Sentinel-2'
                }
-
+product_id='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025'
 kw=query_kwargs.copy()
-kw['raw']=f'filename:S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025*'
+kw['raw']=f'filename:{product_id}*'
 pp=api.query(**kw)
 print(pp)
 api.download_all(pp)
@@ -41,24 +43,21 @@ api.download_all(pp)
 
 #resampling all the 20m bands
 bands=[]
-bands_10=['*/B02/*','*/B03/*','*/B04/*','*/B08/*']
-bands_20=['*/B05/*','*/B06/*','*/B07/*','*/B11/*','*/B12/*']
+bands_10=['B02','B03','B04','B08']
+bands_20=['B05','B06','B07','B11','B12']
 for item in bands_20:
-        im_path='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025.SAFE/GRANULE/*/IMG_DATA/*.jp2'
-        if item in glob(im_path):
-                bird= gdal.Open(im_path)
-                ba2=gdal.Warp(im_path,bird,xRes=10,yRes=10)
-                ba2_ar=iio.imread(im_path)
-                bands.append(xr.open_dataarray(ba2_ar))
+        im_path=glob(f'{product_id}.SAFE/GRANULE/*/IMG_DATA/*{item}.jp2')[0]
+        warped_path=im_path.replace(item,f'{item}_warped')
+        ba2=gdal.Warp(warped_path,im_path,xRes=10,yRes=10)
+        bands.append(xr.open_dataarray(warped_path).rename(item))
+        
 
 for item in bands_10:
-        im_path='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025.SAFE/GRANULE/*/IMG_DATA/*.jp2'
-        if item in glob(im_path):
-                bird= gdal.Open(im_path)
-                bands.append(xr.open_dataarray(bird))
+        im_path=glob(f'{product_id}.SAFE/GRANULE/*/IMG_DATA/*{item}.jp2')[0]
+        bands.append(xr.open_dataarray(im_path).rename(item))
 
 bands=xr.merge(bands)
-bands.to_zarr('/home/indukatoch/Sentinel-pipeline-ingestion/bands.zarr')
+bands.to_zarr(f'{product_id}.zarr',mode='w')
 
 s3 = s3fs.S3FileSystem(
       key=acc_key,
@@ -68,11 +67,7 @@ s3 = s3fs.S3FileSystem(
       }
    )
 
-
-def upload_data(filepath, file_name):
-    s3 = s3fs.S3FileSystem()
-    s3_path = f"cyclops/{img.zarr}"
-    s3.put(filepath, s3_path, recursive=True)
+s3.put(f'{product_id}.zarr', f's3://cyclops/{product_id}.zarr' , recursive=True)
         
 
                      
