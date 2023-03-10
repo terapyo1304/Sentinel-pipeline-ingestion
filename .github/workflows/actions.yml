@@ -7,7 +7,7 @@ on:
         description: 'enter p_id'
         required: true
         default: 'github'
-        type: choice
+        type: string
 jobs:
   build:
     runs-on: ubuntu-latest
