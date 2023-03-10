@@ -1,4 +1,5 @@
 name: Sentinel Ingestion Pipeline
+run-name: ${{inputs.product_id}}
 
 on:
   workflow_dispatch:
@@ -25,7 +26,8 @@ jobs:
 
       - name: install gdal
         run: |
-          sudo add-apt-repository -y ppa:ubuntugis/ppa && apt-get update
+          sudo add-apt-repository -y ppa:ubuntugis/ppa  
+          sudo apt-get update
           sudo apt-get install -y gdal-bin libgdal-dev
           export CPLUS_INCLUDE_PATH=/usr/include/gdal
           export C_INCLUDE_PATH=/usr/include/gdal
