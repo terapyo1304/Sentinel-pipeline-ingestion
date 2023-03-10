@@ -3,9 +3,10 @@ name: run sen_pip.py
 on:
   workflow_dispatch:
     inputs:
-      kw:
-        description: kw
+      product_id:
+        description: 'enter p_id'
         required: true
+        default: 'github'
         type: choice
 jobs:
   build:

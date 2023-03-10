@@ -21,6 +21,11 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 from glob import glob
+import argparse
+
+from yaml import parse
+parser=argparse.ArgumentParser(description='uploads zarr to s3')
+
 load_dotenv()
 apiusr=os.getenv('apiusr')
 apipass=os.getenv('apipass')
@@ -33,7 +38,9 @@ f_date=date.today()
 query_kwargs = {
         'platformname': 'Sentinel-2'
                }
-product_id='S2A_MSIL1C_20230218T085021_N0509_R107_T34NCF_20230218T123025'
+parser.add_argument('product_id',metavar='product_id',type=str,help='enter product id')
+args=parser.parse_args()
+product_id=args.product_id
 kw=query_kwargs.copy()
 kw['raw']=f'filename:{product_id}*'
 pp=api.query(**kw)
