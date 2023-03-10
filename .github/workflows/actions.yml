@@ -6,7 +6,6 @@ on:
       product_id:
         description: 'enter p_id'
         required: true
-        default: 'github'
         type: string
 jobs:
   build:
