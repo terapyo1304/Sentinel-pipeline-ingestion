@@ -23,14 +23,13 @@ LIBRARIES USED:
   9. zipfile
 
 WORKING:
-  Enter the product ID in action workflows.
-  The contents will be downloaded using SentinelAPI.
-  The 20m bands will be resampled to 10m bands using gdal's warp function.
-  The original 10m and resampled 10m bands are appended to a unified list bands.
-  Added the credentials to .env file and added the same to the .gitignore file.
-  Mapped the .env variables to the working file using glob function from glob library.
-  Merged the contents of the list bands using xarray's merge function.
-  Finally converted the entire list into a single zarr and uploaded to S3.
+   Enter the product ID in action workflows.
+   The contents will be downloaded using SentinelAPI. 
+   The 20m bands will be resampled to 10m bands using gdal's warp function. 
+   The original 10m and resampled 10m bands are appended to a unified list bands. 
+   Merged the contents of the list bands using xarray's merge function. 
+   Finally converted the entire list into a single zarr and uploaded to S3. 
+   Credentials are fetched from environment variables to avoid hardcoding in the codebase.
   
 
   
